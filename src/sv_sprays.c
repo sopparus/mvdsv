@@ -16,7 +16,6 @@ of the License, or (at your option) any later version.
 #define SV_MAX_SPRAY_IMAGES 64
 #define SV_SPRAY_SEND_QUEUE 256
 #define SV_SPRAY_RECORD_QUEUE 1024
-#define SV_SPRAY_RELIABLE_RESERVE 2048
 #define SV_SPRAY_NEW_IMAGE_INTERVAL 10.0
 #define SV_SPRAY_HASH_OFFSET 14695981039346656037ULL
 #define SV_SPRAY_HASH_PRIME 1099511628211ULL
@@ -324,9 +323,7 @@ static void SV_SprayWriteBegin(client_t *client, const sv_spray_t *spray)
 
 static qbool SV_SprayReliableCanWrite(client_t *client, int maxsize)
 {
-	// Sprays are bulk cosmetic data. Leave room for normal reliable messages
-	// instead of filling the stream up to the byte before overflow.
-	return !client->num_backbuf && client->netchan.message.cursize <= client->netchan.message.maxsize - maxsize - SV_SPRAY_RELIABLE_RESERVE;
+	return !client->num_backbuf && client->netchan.message.cursize <= client->netchan.message.maxsize - maxsize - 1;
 }
 
 static void SV_SprayWritePixelChunk(client_t *client, int id, int offset, int chunk, const byte *pixels)
