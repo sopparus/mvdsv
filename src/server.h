@@ -992,15 +992,6 @@ void ClientReliableWrite_String(client_t *cl, char *s);
 void ClientReliableWrite_SZ(client_t *cl, void *data, int len);
 void SV_ClearReliable (client_t *cl); // clear cl->netchan.message and backbuf
 
-#ifdef MVD_PEXT1_SPRAYS
-void SV_SpraysNewMap(void);
-void SV_SpraysSendExisting(client_t *client);
-void SV_SpraysSendPending(client_t *client);
-void SV_SpraysParseClientMessage(client_t *client);
-void SV_SpraysClearAll(qbool notify);
-qbool SV_SpraysClearOne(int id, qbool notify);
-#endif
-
 //
 // sv_demo.c
 //

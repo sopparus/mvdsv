@@ -93,7 +93,5 @@ void        PR2_ClearEdict(edict_t* e);
 #ifdef FTE_PEXT_CSQC
 qbool       PR2_SendEntity(edict_t* e, edict_t* to, int sendflags);
 #endif
-qbool       PR2_CanSpray(edict_t* e);
-void        PR2_SprayPlaced(edict_t* e, int spray_id);
 
 #endif /* !__PR2_H__ */

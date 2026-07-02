@@ -73,7 +73,6 @@ set(SRC_COMMON
 	"${DIR_SRC}/sv_phys.c"
 	"${DIR_SRC}/sv_save.c"
 	"${DIR_SRC}/sv_send.c"
-	"${DIR_SRC}/sv_sprays.c"
 	"${DIR_SRC}/sv_user.c"
 	"${DIR_SRC}/vfs_os.c"
 	"${DIR_SRC}/vfs_pak.c"

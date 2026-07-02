@@ -387,9 +387,6 @@ void SV_SpawnServer(char *mapname, qbool devmap, char* entityfile, qbool loading
 	// NOTE: this also set sv.mvdrecording to false, so calling SV_MVD_Record() at end of function
 	memset (&sv, 0, sizeof(sv));
 	sv.max_edicts = MAX_EDICTS_SAFE;
-#ifdef MVD_PEXT1_SPRAYS
-	SV_SpraysNewMap();
-#endif
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.data = sv.datagram_buf;
@@ -499,18 +496,6 @@ void SV_SpawnServer(char *mapname, qbool devmap, char* entityfile, qbool loading
 		}
 	}
 #endif
-#ifdef MVD_PEXT1_SPRAYS
-	{
-		extern cvar_t sv_sprays;
-
-		if (sv_sprays.value) {
-			svs.mvdprotocolextension1 |= MVD_PEXT1_SPRAYS;
-		}
-		else {
-			svs.mvdprotocolextension1 &= ~MVD_PEXT1_SPRAYS;
-		}
-	}
-#endif
 
 #ifdef MVD_PEXT1_WEAPONPREDICTION
 	if (fofs_client_time && fofs_attack_finished && fofs_client_ping) {
@@ -551,8 +536,6 @@ void SV_SpawnServer(char *mapname, qbool devmap, char* entityfile, qbool loading
 	GE_ClientCommand = ED_FindFunctionOffset ("GE_ClientCommand");
 	GE_PausedTic = ED_FindFunctionOffset ("GE_PausedTic");
 	GE_ShouldPause = ED_FindFunctionOffset ("GE_ShouldPause");
-	GE_CanSpray = ED_FindFunctionOffset ("GE_CanSpray");
-	GE_SprayPlaced = ED_FindFunctionOffset ("GE_SprayPlaced");
 
 	// leave slots at start for clients only
 	sv.num_edicts = MAX_CLIENTS+1;

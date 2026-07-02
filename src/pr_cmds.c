@@ -2677,19 +2677,6 @@ void PF_Fixme (void)
 	PR_RunError ("unimplemented bulitin");
 }
 
-#ifdef MVD_PEXT1_SPRAYS
-static void PF_spray_clear(void)
-{
-	G_FLOAT(OFS_RETURN) = SV_SpraysClearOne((int)G_FLOAT(OFS_PARM0), true);
-}
-
-static void PF_spray_clearall(void)
-{
-	SV_SpraysClearAll(true);
-	G_FLOAT(OFS_RETURN) = 1;
-}
-#endif
-
 
 
 static builtin_t std_builtins[] =
@@ -2824,10 +2811,6 @@ static struct { int num; builtin_t func; } ext_builtins[] =
 {448, PF_cvar_string},	// string(string varname) cvar_string
 {531, PF_setpause},		//void(float pause) setpause
 {532, PF_precache_vwep_model},	// float(string model) precache_vwep_model = #532;
-#ifdef MVD_PEXT1_SPRAYS
-{533, PF_spray_clear},		// float(float id) spray_clear = #533;
-{534, PF_spray_clearall},	// float() spray_clearall = #534;
-#endif
 };
 
 #define num_ext_builtins (sizeof(ext_builtins)/sizeof(ext_builtins[0]))

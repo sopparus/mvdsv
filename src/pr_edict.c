@@ -72,7 +72,7 @@ gefv_cache;
 static gefv_cache	gefvCache[GEFV_CACHESIZE] = {{NULL, ""}, {NULL, ""}};
 
 func_t mod_SpectatorConnect, mod_SpectatorThink, mod_SpectatorDisconnect;
-func_t GE_ClientCommand, GE_PausedTic, GE_ShouldPause, GE_CanSpray, GE_SprayPlaced;
+func_t GE_ClientCommand, GE_PausedTic, GE_ShouldPause;
 
 func_t mod_ConsoleCmd, mod_UserCmd;
 func_t mod_UserInfo_Changed, mod_localinfoChanged;

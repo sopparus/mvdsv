@@ -198,10 +198,6 @@ cvar_t sv_bigcoords = {"sv_bigcoords", "", CVAR_SERVERINFO};
 // Only enabled on KTX mod (see sv_init)
 cvar_t sv_pext_mvdsv_serversideweapon = { "sv_pext_mvdsv_serversideweapon", "1" };
 #endif
-#ifdef MVD_PEXT1_SPRAYS
-cvar_t sv_sprays = { "sv_sprays", "1" };
-cvar_t sv_spray_chunks_per_frame = { "sv_spray_chunks_per_frame", "1" };
-#endif
 
 cvar_t sv_extlimits = { "sv_extlimits", "2" };
 
@@ -3584,10 +3580,6 @@ void SV_InitLocal (void)
 	Cvar_Register (&sv_extlimits);
 #ifdef MVD_PEXT1_SERVERSIDEWEAPON
 	Cvar_Register (&sv_pext_mvdsv_serversideweapon);
-#endif
-#ifdef MVD_PEXT1_SPRAYS
-	Cvar_Register (&sv_sprays);
-	Cvar_Register (&sv_spray_chunks_per_frame);
 #endif
 
 #ifdef FTE_PEXT_TRANS

@@ -1086,9 +1086,6 @@ static void Cmd_Begin_f (void)
 	}
 
 	sv_client->lastservertimeupdate = -99; // update immediately
-#ifdef MVD_PEXT1_SPRAYS
-	SV_SpraysSendExisting(sv_client);
-#endif
 }
 
 //=============================================================================
@@ -4775,16 +4772,6 @@ void SV_ExecuteClientMessage (client_t *cl)
 				SV_DropClient(cl);
 				return;
 			}
-			break;
-		}
-#endif
-
-#ifdef MVD_PEXT1_SPRAYS
-		case clc_spray:
-		{
-			SV_SpraysParseClientMessage(cl);
-			if (msg_badread)
-				return;
 			break;
 		}
 #endif

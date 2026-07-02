@@ -513,28 +513,6 @@ qbool PR2_SendEntity(edict_t* e, edict_t* to, int sendflags)
 }
 #endif
 
-qbool PR2_CanSpray(edict_t* e)
-{
-	if (!sv_vm) {
-		return false;
-	}
-
-	pr_global_struct->time = sv.time;
-	pr_global_struct->self = EDICT_TO_PROG(e);
-	return VM_Call(sv_vm, 0, GAME_CAN_SPRAY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) != 0;
-}
-
-void PR2_SprayPlaced(edict_t* e, int spray_id)
-{
-	if (!sv_vm) {
-		return;
-	}
-
-	pr_global_struct->time = sv.time;
-	pr_global_struct->self = EDICT_TO_PROG(e);
-	VM_Call(sv_vm, 1, GAME_SPRAY_PLACED, spray_id, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-}
-
 //===========================================================================
 // InitProgs
 //===========================================================================

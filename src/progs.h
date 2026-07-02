@@ -184,7 +184,7 @@ extern func_t mod_ConsoleCmd, mod_UserCmd;
 extern func_t mod_UserInfo_Changed, mod_localinfoChanged;
 extern func_t mod_ChatMessage;
 extern func_t mod_SpectatorConnect, mod_SpectatorDisconnect, mod_SpectatorThink;
-extern func_t GE_ClientCommand, GE_PausedTic, GE_ShouldPause, GE_CanSpray, GE_SprayPlaced;
+extern func_t GE_ClientCommand, GE_PausedTic, GE_ShouldPause;
 
 extern int fofs_items2; // ZQ_ITEMS2 extension
 extern int fofs_vw_index;	// ZQ_VWEP
