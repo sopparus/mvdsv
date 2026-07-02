@@ -550,7 +550,6 @@ static void SV_WritePlayersToClient (client_t *client, client_frame_t *frame, by
 	usercmd_t cmd;
 	int hideent = 0;
 	int trackent = 0;
-	int spec_track_override = 0;
 	qbool hide_players = fofs_hide_players && ((eval_t *)((byte *)(client->edict)->v + fofs_hide_players))->_int;
 
 	if (fofs_hideentity)
@@ -562,9 +561,6 @@ static void SV_WritePlayersToClient (client_t *client, client_frame_t *frame, by
 		if (trackent < 1 || trackent > MAX_CLIENTS || svs.clients[trackent - 1].state != cs_spawned)
 			trackent = 0;
 	}
-
-	if (client->spectator && trackent > 0 && client->spec_track > 0)
-		spec_track_override = trackent;
 
 	frame->sv_time = sv.time;
 
@@ -586,7 +582,7 @@ static void SV_WritePlayersToClient (client_t *client, client_frame_t *frame, by
 		if (client != cl && hide_players)
 			continue;
 
-		if (trackent && cl == client && !client->spectator)
+		if (trackent && cl == client)
 		{
 			cl = &svs.clients[trackent - 1]; // fakenicking.
 
@@ -598,12 +594,6 @@ static void SV_WritePlayersToClient (client_t *client, client_frame_t *frame, by
 		else
 		{
 			self_ent = client->edict;
-			ent = cl->edict;
-		}
-
-		if (spec_track_override && j == client->spec_track - 1)
-		{
-			cl = &svs.clients[spec_track_override - 1];
 			ent = cl->edict;
 		}
 
@@ -620,10 +610,7 @@ static void SV_WritePlayersToClient (client_t *client, client_frame_t *frame, by
 			continue;
 
 		if (j == trackent - 1)
-		{
-			if (!(spec_track_override && client->spec_track == trackent))
-				continue;
-		}
+			continue;
 
 		if (disable_updates && ent != self_ent)
 		{ // Vladis
