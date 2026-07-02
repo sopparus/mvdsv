@@ -1408,10 +1408,6 @@ void SV_SendDemoMessage(void)
 
 	SZ_Clear (&demo.datagram);
 
-#ifdef MVD_PEXT1_SPRAYS
-	SV_SpraysRecordPending();
-#endif
-
 	demo.recorder.delta_sequence = demo.recorder.netchan.incoming_sequence&255;
 	demo.recorder.netchan.incoming_sequence++;
 	demo.frames[demo.parsecount & UPDATE_MASK].time = sv.time;

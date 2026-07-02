@@ -15,7 +15,6 @@ of the License, or (at your option) any later version.
 #define SV_MAX_SPRAYS 64
 #define SV_MAX_SPRAY_IMAGES 64
 #define SV_SPRAY_SEND_QUEUE 256
-#define SV_SPRAY_RECORD_QUEUE 1024
 #define SV_SPRAY_NEW_IMAGE_INTERVAL 10.0
 #define SV_SPRAY_HASH_OFFSET 14695981039346656037ULL
 #define SV_SPRAY_HASH_PRIME 1099511628211ULL
@@ -100,19 +99,10 @@ typedef struct {
 	int offset;
 } sv_spray_sendqueue_t;
 
-typedef struct {
-	qbool active;
-	int len;
-	byte payload[1 + 2 + 4 + 2 + spraynet_chunk_bytes];
-} sv_spray_record_block_t;
-
 static sv_spray_t sv_sprays[SV_MAX_SPRAYS];
 static sv_spray_image_t sv_spray_images[SV_MAX_SPRAY_IMAGES];
 static sv_spray_upload_t sv_spray_uploads[MAX_CLIENTS];
 static sv_spray_sendqueue_t sv_spray_sendqueues[MAX_CLIENTS];
-static sv_spray_record_block_t sv_spray_record_queue[SV_SPRAY_RECORD_QUEUE];
-static int sv_spray_record_head;
-static int sv_spray_record_count;
 static unsigned long long sv_spray_client_hashes[MAX_CLIENTS][SV_MAX_SPRAY_IMAGES];
 static int sv_spray_client_hash_counts[MAX_CLIENTS];
 static double sv_spray_last_new_image_time[MAX_CLIENTS];
@@ -422,58 +412,12 @@ static void SV_SprayBroadcast(const sv_spray_t *spray)
 	}
 }
 
-static void SV_SprayRecordQueueClear(void)
-{
-	memset(sv_spray_record_queue, 0, sizeof(sv_spray_record_queue));
-	sv_spray_record_head = 0;
-	sv_spray_record_count = 0;
-}
-
-static void SV_SprayRecordQueueBlock(const byte *payload, int payload_len)
-{
-	sv_spray_record_block_t *block;
-	int index;
-
-	if (!sv.mvdrecording || payload_len <= 0) {
-		return;
-	}
-	if (payload_len > (int)sizeof(sv_spray_record_queue[0].payload)) {
-		Con_Printf("SV_SprayRecordQueueBlock: spray demo block is too large\n");
-		return;
-	}
-	if (sv_spray_record_count >= SV_SPRAY_RECORD_QUEUE) {
-		Con_Printf("SV_SprayRecordQueueBlock: spray demo queue overflow\n");
-		return;
-	}
-
-	index = (sv_spray_record_head + sv_spray_record_count) % SV_SPRAY_RECORD_QUEUE;
-	block = &sv_spray_record_queue[index];
-	block->active = true;
-	block->len = payload_len;
-	memcpy(block->payload, payload, payload_len);
-	++sv_spray_record_count;
-}
-
-static qbool SV_SprayRecordFrameHasSpace(int payload_len)
-{
-	sizebuf_t *framebuf = &demo.frames[demo.parsecount & UPDATE_MASK]._buf_;
-	int hidden_len = sizeof_mvdhidden_block_header_t_range0 + payload_len;
-
-	// MVDWrite_Begin() only validates the logical MVD message size; the actual
-	// per-frame buffer can still be almost full from entities, datagrams, or
-	// earlier hidden blocks. Leave a small margin for the MVD message header.
-	return framebuf->cursize + hidden_len + 16 <= framebuf->maxsize;
-}
-
-static qbool SV_SprayRecordHiddenBlock(const byte *payload, int payload_len)
+static void SV_SprayRecordHiddenBlock(const byte *payload, int payload_len)
 {
 	mvdhidden_block_header_t header;
 
 	if (!sv.mvdrecording) {
-		return false;
-	}
-	if (!SV_SprayRecordFrameHasSpace(payload_len)) {
-		return false;
+		return;
 	}
 
 	header.length = payload_len;
@@ -483,9 +427,7 @@ static qbool SV_SprayRecordHiddenBlock(const byte *payload, int payload_len)
 		MVD_SZ_Write(&header.length, sizeof(header.length));
 		MVD_SZ_Write(&header.type_id, sizeof(header.type_id));
 		MVD_SZ_Write(payload, payload_len);
-		return true;
 	}
-	return false;
 }
 
 static void SV_SprayRecordBegin(const sv_spray_t *spray)
@@ -520,7 +462,7 @@ static void SV_SprayRecordBegin(const sv_spray_t *spray)
 	MSG_WriteFloat(&msg, spray->half_width);
 	MSG_WriteFloat(&msg, spray->half_height);
 	MSG_WriteFloat(&msg, spray->alpha);
-	SV_SprayRecordQueueBlock(msg.data, msg.cursize);
+	SV_SprayRecordHiddenBlock(msg.data, msg.cursize);
 }
 
 static void SV_SprayRecordPixels(int id, const byte *pixels, int byte_count)
@@ -540,7 +482,7 @@ static void SV_SprayRecordPixels(int id, const byte *pixels, int byte_count)
 		MSG_WriteLong(&msg, offset);
 		MSG_WriteShort(&msg, chunk);
 		SZ_Write(&msg, pixels + offset, chunk);
-		SV_SprayRecordQueueBlock(msg.data, msg.cursize);
+		SV_SprayRecordHiddenBlock(msg.data, msg.cursize);
 		offset += chunk;
 	}
 }
@@ -555,14 +497,14 @@ static void SV_SprayRecordClearOne(int id)
 	msg.maxsize = sizeof(buffer);
 	MSG_WriteByte(&msg, spraynet_clear_one);
 	MSG_WriteShort(&msg, id);
-	SV_SprayRecordQueueBlock(msg.data, msg.cursize);
+	SV_SprayRecordHiddenBlock(msg.data, msg.cursize);
 }
 
 static void SV_SprayRecordClearAll(void)
 {
 	byte sub = spraynet_clear_all;
 
-	SV_SprayRecordQueueBlock(&sub, sizeof(sub));
+	SV_SprayRecordHiddenBlock(&sub, sizeof(sub));
 }
 
 static void SV_SprayNotifyClearOne(int id)
@@ -678,42 +620,7 @@ void SV_SpraysNewMap(void)
 	memset(sv_spray_client_hashes, 0, sizeof(sv_spray_client_hashes));
 	memset(sv_spray_client_hash_counts, 0, sizeof(sv_spray_client_hash_counts));
 	memset(sv_spray_last_new_image_time, 0, sizeof(sv_spray_last_new_image_time));
-	SV_SprayRecordQueueClear();
 	sv_spray_next_id = 1;
-}
-
-void SV_SpraysRecordPending(void)
-{
-	int budget = (int)sv_spray_chunks_per_frame.value;
-
-	if (!sv.mvdrecording) {
-		SV_SprayRecordQueueClear();
-		return;
-	}
-	if (budget <= 0) {
-		return;
-	}
-
-	while (budget > 0 && sv_spray_record_count > 0) {
-		sv_spray_record_block_t *block = &sv_spray_record_queue[sv_spray_record_head];
-
-		if (!block->active) {
-			sv_spray_record_head = (sv_spray_record_head + 1) % SV_SPRAY_RECORD_QUEUE;
-			--sv_spray_record_count;
-			continue;
-		}
-
-		// Stop at frame capacity instead of forcing MVDWrite_Begin() to append
-		// another kilobyte block and overflow the MVD/QTV frame buffer.
-		if (!SV_SprayRecordHiddenBlock(block->payload, block->len)) {
-			return;
-		}
-
-		memset(block, 0, sizeof(*block));
-		sv_spray_record_head = (sv_spray_record_head + 1) % SV_SPRAY_RECORD_QUEUE;
-		--sv_spray_record_count;
-		--budget;
-	}
 }
 
 void SV_SpraysSendExisting(client_t *client)
