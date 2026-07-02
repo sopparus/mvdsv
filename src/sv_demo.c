@@ -1652,21 +1652,12 @@ void SV_MVD_SendInitialGamestate(mvddest_t* dest)
 			}
 		}
 
-	if (buf.cursize)
-	{
-		SV_WriteRecordMVDStatsMessage(&buf, i);
-		SZ_Clear (&buf);
+		if (buf.cursize)
+		{
+			SV_WriteRecordMVDStatsMessage(&buf, i);
+			SZ_Clear (&buf);
+		}
 	}
-}
-
-#ifdef MVD_PEXT1_SPRAYS
-	if (!dest) {
-		// Recording can start after sprays already exist on the map. Seed the
-		// demo with full spray payloads so playback never depends on live
-		// server/client image caches from before recording began.
-		SV_SpraysRecordExisting();
-	}
-#endif
 
 	// above stats writing must clear buffer
 	if (buf.cursize)

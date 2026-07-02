@@ -550,19 +550,6 @@ static void SV_SprayRecordPixels(int id, const byte *pixels, int byte_count)
 	}
 }
 
-static void SV_SprayRecordPlacement(const sv_spray_t *spray)
-{
-	if (!spray || !spray->active) {
-		return;
-	}
-
-	// Demo/QTV streams must be self-contained. Always record the placement
-	// metadata plus the full image payload, even when live clients/server caches
-	// could have used only the hash.
-	SV_SprayRecordBegin(spray);
-	SV_SprayRecordPixels(spray->id, spray->pixels, spray->byte_count);
-}
-
 static void SV_SprayRecordClearOne(int id)
 {
 	byte buffer[1 + 2];
@@ -734,19 +721,6 @@ void SV_SpraysRecordPending(void)
 	}
 }
 
-void SV_SpraysRecordExisting(void)
-{
-	int i;
-
-	if (!sv.mvdrecording) {
-		return;
-	}
-
-	for (i = 0; i < SV_MAX_SPRAYS; ++i) {
-		SV_SprayRecordPlacement(&sv_sprays[i]);
-	}
-}
-
 void SV_SpraysSendExisting(client_t *client)
 {
 	int i;
@@ -900,7 +874,8 @@ static void SV_SprayFinalize(client_t *client, const sv_spray_upload_t *upload, 
 	// Store first so broadcast, demo recording, and the mod callback all refer
 	// to the same authoritative server id and placement.
 	SV_SprayBroadcast(spray);
-	SV_SprayRecordPlacement(spray);
+	SV_SprayRecordBegin(spray);
+	SV_SprayRecordPixels(spray->id, spray->pixels, spray->byte_count);
 	SV_SprayModPlaced(client, spray);
 }
 
