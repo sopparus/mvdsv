@@ -16,9 +16,7 @@ of the License, or (at your option) any later version.
 #define SV_MAX_SPRAY_IMAGES 64
 #define SV_SPRAY_SEND_QUEUE 256
 #define SV_SPRAY_RECORD_QUEUE 1024
-#define SV_SPRAY_RELIABLE_RESERVE 256
-#define SV_SPRAY_LIVE_CHUNK_BYTES 512
-#define SV_SPRAY_RECORD_FRAME_RESERVE 4096
+#define SV_SPRAY_RELIABLE_RESERVE 2048
 #define SV_SPRAY_NEW_IMAGE_INTERVAL 10.0
 #define SV_SPRAY_HASH_OFFSET 14695981039346656037ULL
 #define SV_SPRAY_HASH_PRIME 1099511628211ULL
@@ -466,8 +464,8 @@ static qbool SV_SprayRecordFrameHasSpace(int payload_len)
 
 	// MVDWrite_Begin() only validates the logical MVD message size; the actual
 	// per-frame buffer can still be almost full from entities, datagrams, or
-	// earlier hidden blocks. Leave generous room for non-spray frame data.
-	return framebuf->cursize + hidden_len + SV_SPRAY_RECORD_FRAME_RESERVE <= framebuf->maxsize;
+	// earlier hidden blocks. Leave a small margin for the MVD message header.
+	return framebuf->cursize + hidden_len + 16 <= framebuf->maxsize;
 }
 
 static qbool SV_SprayRecordHiddenBlock(const byte *payload, int payload_len)
@@ -796,7 +794,7 @@ void SV_SpraysSendPending(client_t *client)
 		}
 
 		if (queue->offset < spray->byte_count) {
-			int chunk = min(SV_SPRAY_LIVE_CHUNK_BYTES, spray->byte_count - queue->offset);
+			int chunk = min(spraynet_chunk_bytes, spray->byte_count - queue->offset);
 
 			if (!SV_SprayReliableCanWrite(client, 1 + 1 + 2 + 4 + 2 + chunk)) {
 				return;

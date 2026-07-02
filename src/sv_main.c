@@ -200,7 +200,7 @@ cvar_t sv_pext_mvdsv_serversideweapon = { "sv_pext_mvdsv_serversideweapon", "1" 
 #endif
 #ifdef MVD_PEXT1_SPRAYS
 cvar_t sv_sprays = { "sv_sprays", "1" };
-cvar_t sv_spray_chunks_per_frame = { "sv_spray_chunks_per_frame", "2" };
+cvar_t sv_spray_chunks_per_frame = { "sv_spray_chunks_per_frame", "1" };
 #endif
 
 cvar_t sv_extlimits = { "sv_extlimits", "2" };
