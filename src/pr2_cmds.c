@@ -48,6 +48,31 @@ static int PASSFLOAT(float f)
 	return fi.i;
 }
 
+static double SV_CurrentAntilagRewindMsec(client_t *cl)
+{
+	// Mirror sv_antilag 2 target-time selection for KTX-owned antilag 1 traces.
+	client_frame_t *frame = &cl->frames[cl->netchan.incoming_acknowledged & UPDATE_MASK];
+	double target_time, rewind;
+	double max_physfps = sv_maxfps.value;
+
+	// Fall back to the averaged ping before the acknowledged frame has timing.
+	if (frame->ping_time <= 0)
+		return SV_CalcPing(cl);
+
+	// Ignore invalid maxfps values when converting one server frame to seconds.
+	if (max_physfps < 20 || max_physfps > 1000)
+		max_physfps = 77.0;
+
+	// Match MVDSV's prediction allowance, including sv_antilag_no_pred.
+	if (sv_antilag_no_pred.value)
+		target_time = frame->sv_time;
+	else
+		target_time = min(frame->sv_time + (frame->ping_time < 0.02 ? 1 / max_physfps : 0.02), sv.time);
+
+	rewind = sv.time - target_time;
+	return max(rewind, 0) * 1000;
+}
+
 #if 0 // Provided for completness.
 static float GETFLOAT(int i)
 {
@@ -1583,7 +1608,7 @@ void PF2_infokey(int e1, char *key, char *valbuff, int sizebuff)
 
 			if (   !strcmp(key, "date_str")
 				|| !strcmp(key, "ip") || !strncmp(key, "realip", 7) || !strncmp(key, "download", 9)
-				|| !strcmp(key, "ping") || !strcmp(key, "*userid") || !strncmp(key, "login", 6)
+				|| !strcmp(key, "ping") || !strcmp(key, "ping_current") || !strcmp(key, "antilag_rewind") || !strcmp(key, "*userid") || !strncmp(key, "login", 6)
 				|| !strcmp(key, "*VIP") || !strcmp(key, "*state")
 				|| !strcmp(key, "netname")
 				|| !strcmp(key, "mapname") || !strcmp(key, "modelname")
@@ -1622,6 +1647,16 @@ void PF2_infokey(int e1, char *key, char *valbuff, int sizebuff)
 			strlcpy(ov, NET_BaseAdrToString (cl->realip), sizeof(ov));
 		else if (!strncmp(key, "download", 9))
 			snprintf(ov, sizeof(ov), "%d", cl->file_percent ? cl->file_percent : -1); //bliP: file percent
+		else if (!strcmp(key, "ping_current"))
+		{
+			client_frame_t *frame = &cl->frames[cl->netchan.incoming_acknowledged & UPDATE_MASK];
+			if (frame->ping_time > 0)
+				snprintf(ov, sizeof(ov), "%.6f", frame->ping_time * 1000);
+			else
+				snprintf(ov, sizeof(ov), "%d", (int)SV_CalcPing(cl));
+		}
+		else if (!strcmp(key, "antilag_rewind"))
+			snprintf(ov, sizeof(ov), "%.6f", SV_CurrentAntilagRewindMsec(cl));
 		else if (!strcmp(key, "ping"))
 			snprintf(ov, sizeof(ov), "%d", (int)SV_CalcPing(cl));
 #ifdef FTE_PEXT_CSQC
