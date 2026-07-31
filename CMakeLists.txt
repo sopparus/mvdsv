@@ -124,7 +124,16 @@ endif()
 ######################################################################################################
 
 # Set base compiler flags
-set(CFLAGS -Wall -std=gnu17)
+set(CFLAGS -Wall)
+if(CMAKE_C_COMPILER_ID STREQUAL "MSVC")
+	# struct-padding warning (C4820)
+    # 'symbol' is not defined as a preprocessor macro (C4668)
+    # selected for inline (C4711)
+    # spectre mitigation (C5045)
+    # unreferenced parameter (C4100)
+    # not inlined (C4710)
+	list(APPEND CFLAGS /wd4820 /wd4668 /wd4711 /wd5045 /wd4100 /wd4710)
+endif()
 set(LFLAGS)
 
 find_package(Threads REQUIRED)
@@ -146,7 +155,9 @@ set_target_properties(${PROJECT_NAME}
 
 # Set include directories
 target_include_directories(${PROJECT_NAME} PRIVATE ${DIR_SRC}/qwprot/src)
-target_include_directories(${PROJECT_NAME} PRIVATE ${PCRE_INCLUDE_DIR})
+if(PCRE_INCLUDE_DIR)
+	target_include_directories(${PROJECT_NAME} PRIVATE ${PCRE_INCLUDE_DIR})
+endif()
 
 
 ######################################################################################################
