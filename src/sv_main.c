@@ -1388,7 +1388,7 @@ static void SVC_DirectConnect (void)
 #endif // PROTOCOL_VERSION_FTE2
 
 #ifdef PROTOCOL_VERSION_MVD1
-	newcl->mvdprotocolextensions1 = mvdext_supported1;
+	newcl->mvdprotocolextensions1 = mvdext_supported1 & svs.mvdprotocolextension1;
 #endif
 
 	newcl->_userinfo_ctx_.max      = MAX_CLIENT_INFOS;

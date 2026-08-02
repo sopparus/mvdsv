@@ -498,15 +498,12 @@ void SV_SpawnServer(char *mapname, qbool devmap, char* entityfile, qbool loading
 #endif
 
 #ifdef MVD_PEXT1_WEAPONPREDICTION
-	if (fofs_client_time && fofs_attack_finished && fofs_client_ping) {
-		svs.mvdprotocolextension1 |= MVD_PEXT1_WEAPONPREDICTION;
-	}
-	else {
-		svs.mvdprotocolextension1 &= ~MVD_PEXT1_WEAPONPREDICTION;
-	}
+	// Legacy client weapon prediction was removed; keep the extension unavailable.
+	svs.mvdprotocolextension1 &= ~MVD_PEXT1_WEAPONPREDICTION;
 #endif
 #ifdef MVD_PEXT1_SIMPLEPROJECTILE
-	svs.mvdprotocolextension1 |= MVD_PEXT1_SIMPLEPROJECTILE;
+	// Legacy simple projectiles were replaced by the EZCSQC projectile stream.
+	svs.mvdprotocolextension1 &= ~MVD_PEXT1_SIMPLEPROJECTILE;
 #endif
 #if defined(FTE_PEXT_CSQC) && defined(MVD_PEXT1_EZCSQC)
 	// EZCSQC is an MVD payload contract carried over the broader FTE CSQC transport.
