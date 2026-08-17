@@ -3180,7 +3180,7 @@ void SV_EZCSQCReady_f(void)
 		if (!sv_client->ezcsqc_ready) {
 			SV_ClientPrintf(sv_client, 2, "\nEZCSQC Antilag ready\n");
 		}
-		sv_client->ezcsqc_ready = true;
+		sv_client->ezcsqc_ready = !strcmp(Cmd_Argv(1), "2") ? 2 : 1;
 	}
 }
 #endif
