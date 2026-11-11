@@ -442,6 +442,7 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 	vec3_t		local_from[MAX_LEGACY_EDICTS], *moved_from = local_from;
 	void		*storage = NULL;
 	float		solid_save;
+	qbool		riding;
 
 	for (i=0 ; i<3 ; i++)
 	{
@@ -468,6 +469,18 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 		|| check->v->movetype == MOVETYPE_NOCLIP)
 			continue;
 
+		// if the entity is standing on the pusher, it will definately be moved
+		riding = ((int)check->v->flags & FL_ONGROUND)
+			&& PROG_TO_EDICT(check->v->groundentity) == pusher;
+		if ( !riding
+		&& ( check->v->absmin[0] >= maxs[0]
+		|| check->v->absmin[1] >= maxs[1]
+		|| check->v->absmin[2] >= maxs[2]
+		|| check->v->absmax[0] <= mins[0]
+		|| check->v->absmax[1] <= mins[1]
+		|| check->v->absmax[2] <= mins[2] ) )
+			continue;
+
 		solid_save = pusher->v->solid;
 		pusher->v->solid = SOLID_NOT;
 		block = SV_TestEntityPosition (check);
@@ -475,22 +488,9 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 		if (block)
 			continue;
 
-		// if the entity is standing on the pusher, it will definately be moved
-		if ( ! ( ((int)check->v->flags & FL_ONGROUND)
-		&& PROG_TO_EDICT(check->v->groundentity) == pusher) )
-		{
-			if ( check->v->absmin[0] >= maxs[0]
-			|| check->v->absmin[1] >= maxs[1]
-			|| check->v->absmin[2] >= maxs[2]
-			|| check->v->absmax[0] <= mins[0]
-			|| check->v->absmax[1] <= mins[1]
-			|| check->v->absmax[2] <= mins[2] )
-				continue;
-
-			// see if the ent's bbox is inside the pusher's final position
-			if (!SV_TestEntityPosition (check))
-				continue;
-		}
+		// see if the ent's bbox is inside the pusher's final position
+		if (!riding && !SV_TestEntityPosition (check))
+			continue;
 
 		// remove the onground flag for non-players
 		if (check->v->movetype != MOVETYPE_WALK)
