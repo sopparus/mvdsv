@@ -427,6 +427,67 @@ trace_t SV_PushEntity (edict_t *ent, vec3_t push, unsigned int traceflags)
 
 /*
 ============
+SV_PushNudgeCandidate
+
+A player the pusher is about to move: standing on it, or within its new bounds.
+============
+*/
+static qbool SV_PushNudgeCandidate (edict_t *pusher, edict_t *check)
+{
+	int num = NUM_FOR_EDICT(check);
+
+	if (num < 1 || num > MAX_CLIENTS || check->v->solid != SOLID_SLIDEBOX)
+		return false;
+	if (((int)check->v->flags & FL_ONGROUND) && PROG_TO_EDICT(check->v->groundentity) == pusher)
+		return true;
+	return !( check->v->absmin[0] >= pusher->v->absmax[0]
+		|| check->v->absmin[1] >= pusher->v->absmax[1]
+		|| check->v->absmin[2] >= pusher->v->absmax[2]
+		|| check->v->absmax[0] <= pusher->v->absmin[0]
+		|| check->v->absmax[1] <= pusher->v->absmin[1]
+		|| check->v->absmax[2] <= pusher->v->absmin[2] );
+}
+
+/*
+============
+SV_NudgeStuckEntity
+
+Try to move the entity out of solid by 1/32 (normal wall clearance), then by 1/8 (what
+pmove would try on its next command), in any direction. If a spot is free, leave the
+entity there and return NULL; otherwise restore its origin.
+============
+*/
+static edict_t *SV_NudgeStuckEntity (edict_t *ent)
+{
+	static const float step[2] = { 1.0f / 32, 1.0f / 8 };
+	static const float sign[3] = { 0, -1, 1 };
+	edict_t *block = sv.edicts;
+	vec3_t base;
+	int s, x, y, z;
+
+	VectorCopy (ent->v->origin, base);
+	for (s = 0; s < 2 && block; s++)
+		for (z = 0; z < 3 && block; z++)
+			for (y = 0; y < 3 && block; y++)
+				for (x = 0; x < 3 && block; x++)
+				{
+					if (!x && !y && !z)
+						continue;
+					ent->v->origin[0] = base[0] + sign[x] * step[s];
+					ent->v->origin[1] = base[1] + sign[y] * step[s];
+					ent->v->origin[2] = base[2] + sign[z] * step[s];
+					block = SV_TestEntityPosition (ent);
+				}
+
+	if (block)
+		VectorCopy (base, ent->v->origin);
+	else
+		SV_LinkEdict (ent, false);
+	return block;
+}
+
+/*
+============
 SV_Push
 
 ============
@@ -442,6 +503,8 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 	vec3_t		local_from[MAX_LEGACY_EDICTS], *moved_from = local_from;
 	void		*storage = NULL;
 	float		solid_save;
+	vec3_t		nudged_from = { 0, 0, 0 };
+	qbool		nudged;
 
 	for (i=0 ; i<3 ; i++)
 	{
@@ -471,6 +534,15 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 		solid_save = pusher->v->solid;
 		pusher->v->solid = SOLID_NOT;
 		block = SV_TestEntityPosition (check);
+		// A player in exact contact with a wall can test as stuck. Skipping him would let the
+		// pusher move through him and leave him inside it, so try a tiny nudge first.
+		nudged = false;
+		if (block && SV_PushNudgeCandidate (pusher, check))
+		{
+			VectorCopy (check->v->origin, nudged_from);
+			block = SV_NudgeStuckEntity (check);
+			nudged = !block;
+		}
 		pusher->v->solid = solid_save;
 		if (block)
 			continue;
@@ -484,12 +556,16 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 			|| check->v->absmin[2] >= maxs[2]
 			|| check->v->absmax[0] <= mins[0]
 			|| check->v->absmax[1] <= mins[1]
-			|| check->v->absmax[2] <= mins[2] )
+			|| check->v->absmax[2] <= mins[2]
+			|| !SV_TestEntityPosition (check) )	// is the ent's bbox inside the pusher's final position?
+			{
+				if (nudged)
+				{	// the pusher doesn't touch him after all, undo the nudge
+					VectorCopy (nudged_from, check->v->origin);
+					SV_LinkEdict (check, false);
+				}
 				continue;
-
-			// see if the ent's bbox is inside the pusher's final position
-			if (!SV_TestEntityPosition (check))
-				continue;
+			}
 		}
 
 		// remove the onground flag for non-players
@@ -505,7 +581,10 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 			memcpy(moved_from, local_from, sizeof(local_from));
 		}
 
-		VectorCopy (check->v->origin, moved_from[num_moved]);
+		if (nudged)	// a blocked push must undo the nudge too
+			VectorCopy (nudged_from, moved_from[num_moved]);
+		else
+			VectorCopy (check->v->origin, moved_from[num_moved]);
 		moved_edict[num_moved] = check;
 		num_moved++;
 
@@ -526,7 +605,8 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 			//if leaving it where it was, allow it to drop to the floor again (useful for plats that move downward)
 			//check->v->flags = (int)check->v->flags & ~FL_ONGROUND; // disconnect: is it needed?
 
-			num_moved--;
+			if (!nudged)	// keep a nudged player listed, so a blocked push undoes the nudge
+				num_moved--;
 			continue;
 		}
 
