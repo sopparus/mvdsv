@@ -504,7 +504,6 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 {
 	int			i, e;
 	edict_t		*check, *block;
-	vec3_t		mins, maxs;
 	vec3_t		pushorig;
 	int			num_moved;
 	edict_t		*local_edict[MAX_LEGACY_EDICTS], **moved_edict = local_edict;
@@ -513,12 +512,6 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 	float		solid_save;
 	vec3_t		from;
 	qbool		riding, nudged;
-
-	for (i=0 ; i<3 ; i++)
-	{
-		mins[i] = pusher->v->absmin[i] + move[i];
-		maxs[i] = pusher->v->absmax[i] + move[i];
-	}
 
 	VectorCopy (pusher->v->origin, pushorig);
 
@@ -543,12 +536,12 @@ qbool SV_Push (edict_t *pusher, vec3_t move)
 		riding = ((int)check->v->flags & FL_ONGROUND)
 			&& PROG_TO_EDICT(check->v->groundentity) == pusher;
 		if ( !riding
-		&& ( check->v->absmin[0] >= maxs[0]
-		|| check->v->absmin[1] >= maxs[1]
-		|| check->v->absmin[2] >= maxs[2]
-		|| check->v->absmax[0] <= mins[0]
-		|| check->v->absmax[1] <= mins[1]
-		|| check->v->absmax[2] <= mins[2] ) )
+		&& ( check->v->absmin[0] >= pusher->v->absmax[0]
+		|| check->v->absmin[1] >= pusher->v->absmax[1]
+		|| check->v->absmin[2] >= pusher->v->absmax[2]
+		|| check->v->absmax[0] <= pusher->v->absmin[0]
+		|| check->v->absmax[1] <= pusher->v->absmin[1]
+		|| check->v->absmax[2] <= pusher->v->absmin[2] ) )
 			continue;
 
 		VectorCopy (check->v->origin, from);
